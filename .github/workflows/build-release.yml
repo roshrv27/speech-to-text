@@ -1,0 +1,105 @@
+name: Build & Release Desktop App
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact_name: SpeechToText-Windows
+            pyinstaller_extra: >-
+              --hidden-import=pynput.keyboard._win32
+              --hidden-import=pynput.mouse._win32
+            icon_flag: --icon=assets/icon.ico
+            add_data_flag: --add-data "assets;assets"
+
+          - os: macos-13
+            artifact_name: SpeechToText-Mac-Intel
+            pyinstaller_extra: >-
+              --hidden-import=pynput.keyboard._darwin
+              --hidden-import=pynput.mouse._darwin
+            icon_flag: --icon=assets/icon.icns
+            add_data_flag: --add-data "assets:assets"
+
+          - os: macos-14
+            artifact_name: SpeechToText-Mac-ARM
+            pyinstaller_extra: >-
+              --hidden-import=pynput.keyboard._darwin
+              --hidden-import=pynput.mouse._darwin
+            icon_flag: --icon=assets/icon.icns
+            add_data_flag: --add-data "assets:assets"
+
+    runs-on: ${{ matrix.os }}
+
+    defaults:
+      run:
+        working-directory: desktop-app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PortAudio (macOS only)
+        if: runner.os == 'macOS'
+        run: brew install portaudio
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -r requirements.txt
+
+      - name: Create icon files
+        run: python create_icons.py
+
+      - name: Build with PyInstaller
+        run: >-
+          pyinstaller
+          --onefile
+          --windowed
+          ${{ matrix.icon_flag }}
+          --name=${{ matrix.artifact_name }}
+          ${{ matrix.add_data_flag }}
+          ${{ matrix.pyinstaller_extra }}
+          main.py
+
+      - name: Sign macOS binary (ad-hoc)
+        if: runner.os == 'macOS'
+        run: >-
+          codesign --force --deep --sign -
+          --entitlements entitlements.plist
+          "dist/${{ matrix.artifact_name }}"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: desktop-app/dist/${{ matrix.artifact_name }}*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: artifacts/**/*

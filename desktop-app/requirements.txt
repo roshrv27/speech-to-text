@@ -1,0 +1,5 @@
+deepgram-sdk>=3.0
+pyaudio>=0.2.14
+pynput>=1.7
+pystray>=0.19
+Pillow>=10.0

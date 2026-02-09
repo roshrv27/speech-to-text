@@ -1,0 +1,15 @@
+LANGUAGES = [
+    ("en", "English"),
+    ("hi", "Hindi"),
+    ("es", "Spanish"),
+    ("fr", "French"),
+    ("de", "German"),
+    ("ja", "Japanese"),
+    ("zh", "Chinese"),
+    ("pt", "Portuguese"),
+    ("ru", "Russian"),
+    ("ko", "Korean"),
+    ("it", "Italian"),
+    ("nl", "Dutch"),
+    ("multi", "Auto-Detect"),
+]
