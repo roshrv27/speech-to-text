@@ -53,8 +53,15 @@ export function useDeepgram({ language }: UseDeepgramOptions): UseDeepgramReturn
       setError(null);
       
       const res = await fetch("/api/deepgram-token");
-      const { key } = await res.json();
-      if (!key) throw new Error("Failed to get Deepgram token");
+      const data = await res.json();
+      console.log("API response:", data);
+      
+      if (!res.ok) {
+        throw new Error(data.error || data.hint || "Failed to get token");
+      }
+      
+      const { key } = data;
+      if (!key) throw new Error("No API key in response");
 
       const mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = mediaStream;
